@@ -35,7 +35,7 @@ if 'Podfile' in appcontent:
 	os.system("pod install")
 	appworkspace = findFileByType(appcontent, ".xcworkspace")
 	appproject = findFileByType(appcontent, ".xcodeproj")
-	# Change bundle ID
+	# Change bundle ID, look in pbxproj inside xcodeproj
 	print(appproject)
 	exit(0)
 	#useful command to get schemes in workspaces
