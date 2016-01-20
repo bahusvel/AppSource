@@ -27,7 +27,7 @@ def replaceBundleID(appath):
 				return
 
 BUILDPATH = "/Users/denislavrov/Documents/AppSourcePath"
-REPO = "https://github.com/amitburst/HackerNews.git"
+REPO = "https://github.com/fullstackio/FlappySwift.git"
 BUNDLEGROUP = "com.bahus"
 XCODESCRIPT = """tell application "Xcode"
 	activate
@@ -40,6 +40,7 @@ XCODESCRIPT = """tell application "Xcode"
 	end tell
 end tell"""
 
+print("Downloading " + REPO)
 git = subprocess.Popen(("git", "clone", REPO), cwd=BUILDPATH, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 gitout, giterr = git.stdout.read(), git.stderr.read()
 
@@ -48,28 +49,34 @@ gitapp = ""
 if len(gitout) > 0:
 	print("Downloading Finished")
 	gitapp = re.search(b'\'.+\'', gitout).group(0).replace(b"'", b"").decode("UTF-8")
-elif len(gitout) == 0 and b'already exists' in giterr:
+elif len(gitout) == 0 and len(giterr) > 0:
 	print("Already Downloaded")
 	gitapp = re.search(b'\'.+\'', giterr).group(0).replace(b"'", b"").decode("UTF-8")
 else:
+	print("Something failed, aborting")
+	print(gitout)
+	print(giterr)
 	exit(1)
 
-appcontent = os.listdir(BUILDPATH + "/" + gitapp)
+app_path = BUILDPATH + "/" + gitapp
+os.chdir(app_path)
+appcontent = os.listdir(app_path)
 
 if 'Podfile' in appcontent:
 	print("You app uses CocoaPods, installing the required pods now")
-	os.chdir(BUILDPATH + "/" + gitapp)
 	os.system("pod install")
-	appworkspace = findFileByType(appcontent, ".xcworkspace")
-	replaceBundleID(BUILDPATH + "/" + gitapp)
-	#useful command to get schemes in workspaces
-	#os.system("xcodebuild -list -workspace " + apptarget)
-	os.system("osascript -e '" + XCODESCRIPT.format(BUILDPATH + "/" + gitapp + "/" + appworkspace) + "'")
 elif 'Cartfile' in appcontent:
 	print("Carthage not supported yet, sorry I will add support soon :)") # TODO
 else:
 	print("No dependency manager detected, building normally") # TODO build from .project
-	os.chdir(BUILDPATH + "/" + gitapp)
-	app_proj = findFileByType(appcontent, ".xcodeproj")
-	replaceBundleID(BUILDPATH + "/" + gitapp)
-	os.system("osascript -e '" + XCODESCRIPT.format(BUILDPATH + "/" + gitapp + "/" + app_proj) + "'")
+
+replaceBundleID(BUILDPATH + "/" + gitapp)
+appworkspace = findFileByType(appcontent, ".xcworkspace")
+app_proj = findFileByType(appcontent, ".xcodeproj")
+print(appworkspace)
+if appworkspace is not None:
+	os.system("osascript -e '" + XCODESCRIPT.format(app_path + "/" + appworkspace) + "'")
+elif app_proj is not None:
+	os.system("osascript -e '" + XCODESCRIPT.format(app_path + "/" + app_proj) + "'")
+else:
+	print("Did not find project or workspace, cannot build")
