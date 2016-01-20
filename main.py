@@ -31,7 +31,7 @@ REPO = "https://github.com/amitburst/HackerNews.git"
 BUNDLEGROUP = "com.bahus"
 XCODESCRIPT = """tell application "Xcode"
 	activate
-	open "/Users/denislavrov/Documents/AppSourcePath/HackerNews/HackerNews.xcworkspace"
+	open "%s"
 	clean
 	build
 	launch
@@ -59,15 +59,17 @@ appcontent = os.listdir(BUILDPATH + "/" + gitapp)
 if 'Podfile' in appcontent:
 	print("You app uses CocoaPods, installing the required pods now")
 	os.chdir(BUILDPATH + "/" + gitapp)
-	#os.system("pod install")
+	os.system("pod install")
 	appworkspace = findFileByType(appcontent, ".xcworkspace")
 	replaceBundleID(BUILDPATH + "/" + gitapp)
 	#useful command to get schemes in workspaces
 	#os.system("xcodebuild -list -workspace " + apptarget)
-	print(BUILDPATH + "/" + gitapp + "/" + appworkspace)
-	os.system("osascript -e '" + XCODESCRIPT + "'")
+	os.system("osascript -e '" + XCODESCRIPT.format(BUILDPATH + "/" + gitapp + "/" + appworkspace) + "'")
 elif 'Cartfile' in appcontent:
 	print("Carthage not supported yet, sorry I will add support soon :)") # TODO
 else:
-	print("No dependency manager detected") # TODO build from .project
-
+	print("No dependency manager detected, building normally") # TODO build from .project
+	os.chdir(BUILDPATH + "/" + gitapp)
+	app_proj = findFileByType(appcontent, ".xcodeproj")
+	replaceBundleID(BUILDPATH + "/" + gitapp)
+	os.system("osascript -e '" + XCODESCRIPT.format(BUILDPATH + "/" + gitapp + "/" + app_proj) + "'")
