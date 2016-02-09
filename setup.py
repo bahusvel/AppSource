@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='apps',
     version='0.1',
-    py_modules=['apps', 'installer', 'gitcontroller'],
+    py_modules=['apps', 'installer', 'gitcontroller', 'fscontroller'],
     install_requires=[
         'Click',
         'PyGithub'
