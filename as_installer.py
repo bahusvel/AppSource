@@ -1,8 +1,10 @@
 import os
 import mmap
+import click
+import subprocess
 
 CODE_SIGN_IDENTITY = ""
-PROVISIONING_PROFILE = ""
+
 
 def findFileByType(appcontent, extension):
 	for file in appcontent:
@@ -35,7 +37,25 @@ def replace_bundle_id(appath, old_group_id, new_group_id):
 	return True
 
 
-def build_install(appid, buildpath, new_group_id):
+def get_identities():
+	output = subprocess.check_output(["security", "find-identity", "-v", "-p", "codesigning"], universal_newlines=True)
+	identities = set()
+	for line in output.split("\n"):
+		left = line.find("\"")
+		if left > 0:
+			right = line.find("\"", left+1)
+			name = line[left+1:right]
+			if "iPhone Developer:" in name:
+				identities.add(name)
+	return list(identities)
+
+
+def install_to_device(bundle_path):
+	# requires https://github.com/phonegap/ios-deploy
+	os.system("ios-deploy --justlaunch --bundle \"{}\"".format(bundle_path))
+
+
+def build(appid, buildpath, new_group_id):
 	app_path = buildpath + "/" + appid
 	os.chdir(app_path)
 	appcontent = os.listdir(app_path)
@@ -54,8 +74,9 @@ def build_install(appid, buildpath, new_group_id):
 	if appworkspace is not None:
 		os.system("xcodebuild -workspace {} -scheme {}".format(app_proj, ""))
 	elif app_proj is not None:
-		os.system("xcodebuild -project {} CODE_SIGN_IDENTITY=\"{}\" PROVISIONING_PROFILE=\"{}\"".format(app_proj, CODE_SIGN_IDENTITY, PROVISIONING_PROFILE))
+		os.system("xcodebuild -project {} CODE_SIGN_IDENTITY=\"{}\"".format(app_proj, CODE_SIGN_IDENTITY))
 	else:
 		print("Did not find project or workspace, cannot build")
 
-#build_install("github.fullstackio.FlappySwift", "/Users/denislavrov/Library/Application Support/AppSource/build", "com.bahus")
+#build("github.fullstackio.FlappySwift", "/Users/denislavrov/Library/Application Support/AppSource/build", "com.bahus")
+print(get_identities())

@@ -3,7 +3,7 @@ import os
 import as_gitcontroller as gc
 from as_fscontroller import read_appfile
 import extracting
-import installer
+import as_installer
 
 APPSOURCE_INDEX = "https://github.com/bahusvel/AppSource-Index.git"
 APPSOURCE_REPO = "https://github.com/bahusvel/AppSource.git"
@@ -47,7 +47,7 @@ def install(url, name):
 		github_id = extracting.extract_github_id(url)
 		appid = "github.{}.{}".format(github_id[0], github_id[1])
 		gc.gitclone(url, aspath=appid)
-		#installer.build_install(appid, STORAGEBUILD, NEW_BUNDLE_ID)
+		#installer.build(appid, STORAGEBUILD, NEW_BUNDLE_ID)
 
 
 @click.command()
