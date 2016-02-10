@@ -1,7 +1,7 @@
 import click
 import os
-import gitcontroller as gc
-from fscontroller import read_appfile
+import as_gitcontroller as gc
+from as_fscontroller import read_appfile
 import extracting
 import installer
 

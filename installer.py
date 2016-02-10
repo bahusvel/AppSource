@@ -58,4 +58,4 @@ def build_install(appid, buildpath, new_group_id):
 	else:
 		print("Did not find project or workspace, cannot build")
 
-build_install("github.fullstackio.FlappySwift", "/Users/denislavrov/Library/Application Support/AppSource/build", "com.bahus")
+#build_install("github.fullstackio.FlappySwift", "/Users/denislavrov/Library/Application Support/AppSource/build", "com.bahus")
