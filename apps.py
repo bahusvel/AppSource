@@ -2,6 +2,8 @@ import click
 import os
 import gitcontroller as gc
 from fscontroller import read_appfile
+import extracting
+import installer
 
 APPSOURCE_INDEX = "https://github.com/bahusvel/AppSource-Index.git"
 APPSOURCE_REPO = "https://github.com/bahusvel/AppSource.git"
@@ -13,6 +15,7 @@ STORAGEMACOSX = STORAGEINDEX+"/macosx"
 STORAGE_LOCAL_INDEX = APPSTORAGE+"/localindex"
 STORAGECLI = APPSTORAGE+"/cli"
 STORAGEBUILD = APPSTORAGE+"/build"
+NEW_BUNDLE_ID = "com.bahus"
 
 
 class TYPE:
@@ -25,8 +28,26 @@ def apps():
 
 
 @click.command()
-def install():
-	pass
+@click.option("--url")
+@click.argument("name")
+def install(url, name):
+	if name is None and url is None:
+		name = click.prompt("Enter the module name")
+	if name is not None and url is None:
+		file = "{}/{}.json".format(STORAGEIOS, name)
+		if os.path.exists(file):
+			appdict = read_appfile(file)
+			url = appdict["repo"]
+		else:
+			click.secho("The module you requested is not in the index", err=True)
+			url = click.prompt("Please enter the url for the module")
+	if url is not None:
+		check_create(STORAGEBUILD)
+		os.chdir(STORAGEBUILD)
+		github_id = extracting.extract_github_id(url)
+		appid = "github.{}.{}".format(github_id[0], github_id[1])
+		gc.gitclone(url, aspath=appid)
+		#installer.build_install(appid, STORAGEBUILD, NEW_BUNDLE_ID)
 
 
 @click.command()
