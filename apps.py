@@ -64,7 +64,22 @@ def install(url, name):
 		else:
 			click.secho("No developer identities were found on your machine!", err=True)
 			exit(1)
-		installer.build(appid, STORAGEBUILD, NEW_BUNDLE_ID, s_identity)
+		installer.build_prep(app_path, NEW_BUNDLE_ID)
+
+		#compiling
+		workspace = installer.get_workspace(app_path)
+		project = installer.get_project(app_path)
+		if workspace is not None:
+			click.secho("The app your are building uses a workspace")
+			scheme = click.prompt("Please enter the scheme name to build the app")
+			installer.build_workspace(workspace, scheme, s_identity)
+		elif project is not None:
+			installer.build_project(project, s_identity)
+		else:
+			click.secho("Could not find project or workspace, cannot build the app", err=True)
+			exit(1)
+
+		# installing
 		bundles = installer.deep_folder_find(app_path, ".app")
 		if len(bundles) > 1:
 			bundle = click.prompt("Please choose the correct bundle to deploy", type=click.Choice(bundles))

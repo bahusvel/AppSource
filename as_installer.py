@@ -19,6 +19,16 @@ def deep_folder_find(app_path, extension):
 	return files
 
 
+def deep_file_find(path, ends):
+	result_files = []
+	for path, _, files in os.walk(path):
+		for file in files:
+			full_path = path+"/"+file
+			if full_path.endswith(ends):
+				result_files.append(full_path)
+	return result_files
+
+
 def find_bundle_id(appath):
 	for path, dirs, _ in os.walk(appath):
 		for ddir in dirs:
@@ -31,8 +41,22 @@ def find_bundle_id(appath):
 				if bundle_start > 0:
 					bundle_off = pbxmem[bundle_start:].find(b";")
 					bundle_id = pbxmem[bundle_start + len(searchstr): bundle_start+bundle_off].decode("UTF-8")
-					group_id = bundle_id[1:bundle_id.rfind(".")]
+					group_id = bundle_id[:bundle_id.rfind(".")]
+					group_id.replace("\"","")
 					return group_id
+	# check the info plist
+	for plist in deep_file_find(appath, "Info.plist"):
+		with open(plist, 'r') as plistfile:
+			plistmem = mmap.mmap(plistfile.fileno(), 0, access=mmap.ACCESS_READ)
+			searchstr = b"<key>CFBundleIdentifier</key>"
+			identifierkey = plistmem.find(searchstr)
+			if identifierkey > 0:
+				identifier = plistmem[len(searchstr)+identifierkey:]
+				id_start = identifier.find(b"<string>") + len(b"<string>")
+				id_end = identifier.find(b"</string>")
+				full_id = identifier[id_start:id_end]
+				bundle_id = full_id[:full_id.rfind(b".")]
+				return bundle_id.decode("ascii")
 
 
 def replace_bundle_id(appath, old_group_id, new_group_id):
@@ -59,11 +83,9 @@ def install_to_device(bundle_path):
 	os.system("ios-deploy --justlaunch --bundle \"{}\"".format(bundle_path))
 
 
-def build(appid, buildpath, new_group_id, signing_identity):
-	app_path = buildpath + "/" + appid
+def check_install_dependencies(app_path):
 	os.chdir(app_path)
 	appcontent = os.listdir(app_path)
-
 	if 'Podfile' in appcontent:
 		print("You app uses CocoaPods, installing the required pods now")
 		os.system("pod install")
@@ -72,21 +94,52 @@ def build(appid, buildpath, new_group_id, signing_identity):
 	else:
 		print("No dependency manager detected, building normally")
 
+
+def get_workspace(app_path):
+	appcontent = os.listdir(app_path)
+	appworkspace = findFileByType(appcontent, ".xcworkspace")
+	return appworkspace
+
+
+def get_project(app_path):
+	appcontent = os.listdir(app_path)
+	app_proj = findFileByType(appcontent, ".xcodeproj")
+	return app_proj
+
+
+def get_schemes(app_workspace):
+	os.system("ruby -r " + REFRESH_WORKSPACES.format(app_workspace))
+	schemes = []
+	output = subprocess.check_output(["xcodebuild", "-list", "-workspace", app_workspace], universal_newlines=True)
+	schemes_start = output.find("Schemes:") + len("Schemes:") + 1
+	if schemes_start > 0:
+		for scheme in output[schemes_start:].splitlines():
+			nscheme = scheme.replace(" ", "")
+			if nscheme != "":
+				schemes.append(nscheme)
+	return schemes
+
+
+def build_workspace(app_workspace, scheme, signing_identity):
+	if app_workspace is not None:
+		os.system("xcodebuild -workspace {} -scheme {} CODE_SIGN_IDENTITY=\"{}\"".format(app_workspace, scheme, signing_identity))
+
+
+def build_project(app_proj, signing_identity):
+	if app_proj is not None:
+		os.system("xcodebuild -project {} CODE_SIGN_IDENTITY=\"{}\"".format(app_proj, signing_identity))
+
+
+def build_prep(app_path, new_group_id):
+	check_install_dependencies(app_path)
 	bundle_id = find_bundle_id(app_path)
 	if bundle_id is None:
 		Exception("Could not find the bundle id")
+		exit(1)
 	print(bundle_id)
 	replace_bundle_id(app_path, bundle_id, new_group_id)
-	appworkspace = findFileByType(appcontent, ".xcworkspace")
-	app_proj = findFileByType(appcontent, ".xcodeproj")
-	if appworkspace is not None:
-		os.system("xcodebuild -workspace {} -scheme {}".format(app_proj, ""))
-	elif app_proj is not None:
-		os.system("xcodebuild -project {} CODE_SIGN_IDENTITY=\"{}\"".format(app_proj, signing_identity))
-	else:
-		print("Did not find project or workspace, cannot build")
 
 #build("github.fullstackio.FlappySwift", "/Users/denislavrov/Library/Application Support/AppSource/build", "com.bahus")
 #print(get_identities())
 
-#print(deep_folder_find("/Users/denislavrov/Library/Application Support/AppSource/build/github.mukeshthawani.Calculator", ".xcodeproj"))
+print(get_schemes("/Users/denislavrov/Library/Application Support/AppSource/build/github.AaronRandall.Megabite/Megabite.xcworkspace"))
