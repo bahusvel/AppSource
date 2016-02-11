@@ -1,9 +1,6 @@
 import os
 import mmap
-import click
 import subprocess
-
-CODE_SIGN_IDENTITY = ""
 
 
 def findFileByType(appcontent, extension):
@@ -11,6 +8,15 @@ def findFileByType(appcontent, extension):
 		if file.endswith(extension):
 			return file
 	return None
+
+
+def deep_folder_find(app_path, extension):
+	files = []
+	for path, dirs, _ in os.walk(app_path):
+		for ddir in dirs:
+			if ddir.endswith(extension):
+				files.append(path+"/"+ddir)
+	return files
 
 
 def find_bundle_id(appath):
@@ -25,10 +31,8 @@ def find_bundle_id(appath):
 				if bundle_start > 0:
 					bundle_off = pbxmem[bundle_start:].find(b";")
 					bundle_id = pbxmem[bundle_start + len(searchstr): bundle_start+bundle_off].decode("UTF-8")
-					group_id = bundle_id[:bundle_id.rfind(".")]
+					group_id = bundle_id[1:bundle_id.rfind(".")]
 					return group_id
-				else:
-					return None
 
 
 def replace_bundle_id(appath, old_group_id, new_group_id):
@@ -55,7 +59,7 @@ def install_to_device(bundle_path):
 	os.system("ios-deploy --justlaunch --bundle \"{}\"".format(bundle_path))
 
 
-def build(appid, buildpath, new_group_id):
+def build(appid, buildpath, new_group_id, signing_identity):
 	app_path = buildpath + "/" + appid
 	os.chdir(app_path)
 	appcontent = os.listdir(app_path)
@@ -68,15 +72,21 @@ def build(appid, buildpath, new_group_id):
 	else:
 		print("No dependency manager detected, building normally")
 
-	replace_bundle_id(app_path, "io.fullstack", new_group_id)
+	bundle_id = find_bundle_id(app_path)
+	if bundle_id is None:
+		Exception("Could not find the bundle id")
+	print(bundle_id)
+	replace_bundle_id(app_path, bundle_id, new_group_id)
 	appworkspace = findFileByType(appcontent, ".xcworkspace")
 	app_proj = findFileByType(appcontent, ".xcodeproj")
 	if appworkspace is not None:
 		os.system("xcodebuild -workspace {} -scheme {}".format(app_proj, ""))
 	elif app_proj is not None:
-		os.system("xcodebuild -project {} CODE_SIGN_IDENTITY=\"{}\"".format(app_proj, CODE_SIGN_IDENTITY))
+		os.system("xcodebuild -project {} CODE_SIGN_IDENTITY=\"{}\"".format(app_proj, signing_identity))
 	else:
 		print("Did not find project or workspace, cannot build")
 
 #build("github.fullstackio.FlappySwift", "/Users/denislavrov/Library/Application Support/AppSource/build", "com.bahus")
-print(get_identities())
+#print(get_identities())
+
+#print(deep_folder_find("/Users/denislavrov/Library/Application Support/AppSource/build/github.mukeshthawani.Calculator", ".xcodeproj"))

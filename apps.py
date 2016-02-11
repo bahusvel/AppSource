@@ -1,9 +1,10 @@
 import click
 import os
+import shutil
 import as_gitcontroller as gc
 from as_fscontroller import read_appfile
 import extracting
-import as_installer
+import as_installer as installer
 
 APPSOURCE_INDEX = "https://github.com/bahusvel/AppSource-Index.git"
 APPSOURCE_REPO = "https://github.com/bahusvel/AppSource.git"
@@ -46,8 +47,33 @@ def install(url, name):
 		os.chdir(STORAGEBUILD)
 		github_id = extracting.extract_github_id(url)
 		appid = "github.{}.{}".format(github_id[0], github_id[1])
+		app_path = STORAGEBUILD+"/"+appid
+		if os.path.exists(app_path):
+			shutil.rmtree(app_path)
 		gc.gitclone(url, aspath=appid)
-		#installer.build(appid, STORAGEBUILD, NEW_BUNDLE_ID)
+		identities = installer.get_identities()
+		click.secho(
+		"""The app you have chosen will need to be signed,
+		in order to sign the app you need to have an active Apple Developer account,
+		you are also requried to generate wildcard AppID and Mobile Provisioning Profile for that AppID"""
+		)
+		if len(identities) > 1:
+			s_identity = click.prompt("Please choose the signing identity", type=click.Choice(identities))
+		elif len(identities) == 1:
+			s_identity = identities[0]
+		else:
+			click.secho("No developer identities were found on your machine!", err=True)
+			exit(1)
+		installer.build(appid, STORAGEBUILD, NEW_BUNDLE_ID, s_identity)
+		bundles = installer.deep_folder_find(app_path, ".app")
+		if len(bundles) > 1:
+			bundle = click.prompt("Please choose the correct bundle to deploy", type=click.Choice(bundles))
+		elif len(bundles) == 1:
+			bundle = bundles[0]
+		else:
+			click.secho("Could not find an App Bundle, maybe compiler failed?", err=True)
+			exit(1)
+		installer.install_to_device(bundle)
 
 
 @click.command()
@@ -113,6 +139,12 @@ def upgrade(local):
 
 
 @click.command()
+def clean():
+	shutil.rmtree(STORAGEBUILD)
+	os.mkdir(STORAGEBUILD)
+
+
+@click.command()
 def publish():
 	pass
 
@@ -127,6 +159,7 @@ apps.add_command(search)
 apps.add_command(update)
 apps.add_command(upgrade)
 apps.add_command(publish)
+apps.add_command(clean)
 
 if __name__ == '__main__':
 	apps()
