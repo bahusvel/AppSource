@@ -43,7 +43,7 @@ def find_bundle_id(appath):
 					bundle_off = pbxmem[bundle_start:].find(b";")
 					bundle_id = pbxmem[bundle_start + len(searchstr): bundle_start+bundle_off].decode("UTF-8")
 					group_id = bundle_id[:bundle_id.rfind(".")]
-					group_id.replace("\"","")
+					group_id = group_id.replace("\"", "")
 					return group_id
 	# check the info plist
 	for plist in deep_file_find(appath, "Info.plist"):
