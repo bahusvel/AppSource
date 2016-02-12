@@ -72,6 +72,7 @@ def install(url, name):
 		if workspace is not None:
 			click.secho("The app your are building uses a workspace")
 			scheme = click.prompt("Please enter the scheme name to build the app")
+			installer.refresh_workspaces(project)
 			installer.build_workspace(workspace, scheme, s_identity)
 		elif project is not None:
 			installer.build_project(project, s_identity)

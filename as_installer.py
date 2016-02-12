@@ -1,6 +1,7 @@
 import os
 import mmap
 import subprocess
+import apps
 
 
 def findFileByType(appcontent, extension):
@@ -107,8 +108,12 @@ def get_project(app_path):
 	return app_proj
 
 
+def refresh_workspaces(app_proj):
+	command = apps.STORAGECLI+"/refresh_workspaces.rb"
+	os.system("ruby {} {}".format(command, app_proj))
+
+
 def get_schemes(app_workspace):
-	os.system("ruby -r " + REFRESH_WORKSPACES.format(app_workspace))
 	schemes = []
 	output = subprocess.check_output(["xcodebuild", "-list", "-workspace", app_workspace], universal_newlines=True)
 	schemes_start = output.find("Schemes:") + len("Schemes:") + 1
