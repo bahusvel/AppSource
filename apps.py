@@ -71,8 +71,8 @@ def install(url, name):
 		project = installer.get_project(app_path)
 		if workspace is not None:
 			click.secho("The app your are building uses a workspace")
-			scheme = click.prompt("Please enter the scheme name to build the app")
 			installer.refresh_workspaces(project)
+			scheme = click.prompt("Please enter the scheme name to build the app", type=click.Choice(installer.get_schemes(workspace)))
 			installer.build_workspace(workspace, scheme, s_identity)
 		elif project is not None:
 			installer.build_project(project, s_identity)
@@ -88,7 +88,10 @@ def install(url, name):
 			bundle = bundles[0]
 		else:
 			click.secho("Could not find an App Bundle, maybe compiler failed?", err=True)
-			exit(1)
+			locate = click.confirm("Would you like to locate it manually?", default=False)
+			if not locate:
+				exit(1)
+			bundle = click.prompt("Please enter the app bundle location")
 		installer.install_to_device(bundle)
 
 

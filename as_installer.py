@@ -110,7 +110,7 @@ def get_project(app_path):
 
 def refresh_workspaces(app_proj):
 	command = apps.STORAGECLI+"/refresh_workspaces.rb"
-	os.system("ruby {} {}".format(command, app_proj))
+	os.system("ruby \"{}\" \"{}\"".format(command, app_proj))
 
 
 def get_schemes(app_workspace):
