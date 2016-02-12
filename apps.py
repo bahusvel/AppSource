@@ -3,7 +3,7 @@ import os
 import shutil
 import as_gitcontroller as gc
 from as_fscontroller import read_appfile
-import extracting
+import as_extracting
 import as_installer as installer
 
 APPSOURCE_INDEX = "https://github.com/bahusvel/AppSource-Index.git"
@@ -45,7 +45,7 @@ def install(url, name):
 	if url is not None:
 		check_create(STORAGEBUILD)
 		os.chdir(STORAGEBUILD)
-		github_id = extracting.extract_github_id(url)
+		github_id = as_extracting.extract_github_id(url)
 		appid = "github.{}.{}".format(github_id[0], github_id[1])
 		app_path = STORAGEBUILD+"/"+appid
 		if os.path.exists(app_path):
