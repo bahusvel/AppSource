@@ -7,19 +7,27 @@ from as_fscontroller import read_appfile
 import as_extracting
 import as_installer as installer
 
+
+def check_create(path):
+	if not os.path.exists(path):
+		os.mkdir(path)
+
 APPSOURCE_INDEX = "https://github.com/bahusvel/AppSource-Index.git"
 APPSOURCE_REPO = "https://github.com/bahusvel/AppSource.git"
 APPSOURCE_REPO_ID = "bahusvel/AppSource"
 
 APPSTORAGE = click.get_app_dir("AppSource")
+check_create(APPSTORAGE)
 STORAGEINDEX = APPSTORAGE+"/index"
 STORAGEIOS = STORAGEINDEX+"/ios"
 STORAGEMACOSX = STORAGEINDEX+"/macosx"
 STORAGE_LOCAL_INDEX = APPSTORAGE+"/localindex"
 STORAGECLI = APPSTORAGE+"/cli"
 STORAGEBUILD = APPSTORAGE+"/build"
-STORAGESETTINGS = APPSTORAGE+"settings.json"
+check_create(STORAGEBUILD)
+STORAGESETTINGS = APPSTORAGE+"/settings.json"
 settings_dict = {}
+
 
 class TYPE:
 	IOS = "IOS"
@@ -28,9 +36,10 @@ class TYPE:
 
 @click.group()
 def apps():
-	global NEW_BUNDLE_ID
 	global settings_dict
 	click.echo("Welcome to AppSource")
+	if not os.path.exists(STORAGESETTINGS):
+		open(STORAGESETTINGS, "w").close()
 	with open(STORAGESETTINGS, "r+") as settings_file:
 		fcontents = settings_file.read()
 		if fcontents is not "":
@@ -43,6 +52,8 @@ def apps():
 			group_id = click.prompt("Please enter the Group ID in format [TLD].[GROUPNAME] e.g: com.bahus")
 			settings_dict["group_id"] = group_id
 		if "store_github_account" not in settings_dict:
+			click.secho("AppSource uses and regularly interacts with GitHub, a lot of its functionality depends on this integration." + ""
+			"Allow it to remember your github credentials so that you wont be nagged to enter them every time.")
 			settings_dict["store_github_account"] = click.confirm("Would you like the system to remember your github credentials? ", default=True)
 		if settings_dict["store_github_account"] and "github_username" not in settings_dict:
 			settings_dict["github_username"] = click.prompt("Please enter your GitHub Username")
@@ -73,7 +84,6 @@ def install(url, name):
 			click.secho("The module you requested is not in the index", err=True)
 			url = click.prompt("Please enter the url for the module")
 	if url is not None:
-		check_create(STORAGEBUILD)
 		os.chdir(STORAGEBUILD)
 		github_id = as_extracting.extract_github_id(url)
 		appid = "github.{}.{}".format(github_id[0], github_id[1])
@@ -164,7 +174,6 @@ def list_type(entity_type):
 
 @click.command()
 def update():
-	check_create(APPSTORAGE)
 	if not os.path.exists(STORAGEINDEX):
 		os.chdir(APPSTORAGE)
 		gc.gitclone(APPSOURCE_INDEX, aspath="index")
@@ -176,7 +185,6 @@ def update():
 @click.command()
 @click.option("--local/--remote", default=False)
 def upgrade(local):
-	check_create(APPSTORAGE)
 	if not local:
 		if not os.path.exists(STORAGECLI):
 			os.chdir(APPSTORAGE)
@@ -201,10 +209,6 @@ def clean():
 def publish():
 	pass
 
-
-def check_create(path):
-	if not os.path.exists(path):
-		os.mkdir(path)
 
 # command layout
 apps.add_command(install)
