@@ -9,6 +9,7 @@ import as_installer as installer
 
 APPSOURCE_INDEX = "https://github.com/bahusvel/AppSource-Index.git"
 APPSOURCE_REPO = "https://github.com/bahusvel/AppSource.git"
+APPSOURCE_REPO_ID = "bahusvel/AppSource"
 
 APPSTORAGE = click.get_app_dir("AppSource")
 STORAGEINDEX = APPSTORAGE+"/index"
@@ -18,8 +19,7 @@ STORAGE_LOCAL_INDEX = APPSTORAGE+"/localindex"
 STORAGECLI = APPSTORAGE+"/cli"
 STORAGEBUILD = APPSTORAGE+"/build"
 STORAGESETTINGS = APPSTORAGE+"settings.json"
-NEW_BUNDLE_ID = ""
-
+settings_dict = {}
 
 class TYPE:
 	IOS = "IOS"
@@ -29,6 +29,7 @@ class TYPE:
 @click.group()
 def apps():
 	global NEW_BUNDLE_ID
+	global settings_dict
 	click.echo("Welcome to AppSource")
 	with open(STORAGESETTINGS, "r+") as settings_file:
 		fcontents = settings_file.read()
@@ -41,7 +42,17 @@ def apps():
 			"This Group ID must match your wildcard App ID and provisioning profile, and it will be used for all of your apps")
 			group_id = click.prompt("Please enter the Group ID in format [TLD].[GROUPNAME] e.g: com.bahus")
 			settings_dict["group_id"] = group_id
-		NEW_BUNDLE_ID = settings_dict["group_id"]
+		if "store_github_account" not in settings_dict:
+			settings_dict["store_github_account"] = click.confirm("Would you like the system to remember your github credentials? ", default=True)
+		if settings_dict["store_github_account"] and "github_username" not in settings_dict:
+			settings_dict["github_username"] = click.prompt("Please enter your GitHub Username")
+			settings_dict["github_password"] = click.prompt("Please enter your GitHub Password", hide_input=True)
+		if settings_dict["store_github_account"] and "appsource_stared" not in settings_dict:
+			try:
+				gc.github_star(gc.github_get_repo_by_name(APPSOURCE_REPO_ID))
+				settings_dict["appsource_stared"] = True
+			except Exception:
+				click.secho("Failed starring AppSource")
 		#write the settings back
 		settings_file.seek(0)
 		json.dump(settings_dict, settings_file)
@@ -83,7 +94,7 @@ def install(url, name):
 		else:
 			click.secho("No developer identities were found on your machine!", err=True)
 			exit(1)
-		installer.build_prep(app_path, NEW_BUNDLE_ID)
+		installer.build_prep(app_path, settings_dict["group_id"])
 
 		#compiling
 		workspace = installer.get_workspace(app_path)
