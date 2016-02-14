@@ -98,3 +98,10 @@ def gitupsync(message):
 	os.system("git add .")
 	os.system("git commit -a -m \"" + message + "\"")
 
+
+def github_get_repo_by_name(fullname):
+	return github_login().get_repo(fullname)
+
+
+def github_star(repo):
+	github_login().get_user().add_to_starred(repo)

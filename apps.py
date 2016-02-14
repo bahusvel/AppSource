@@ -1,6 +1,7 @@
 import click
 import os
 import shutil
+import json
 import as_gitcontroller as gc
 from as_fscontroller import read_appfile
 import as_extracting
@@ -16,16 +17,34 @@ STORAGEMACOSX = STORAGEINDEX+"/macosx"
 STORAGE_LOCAL_INDEX = APPSTORAGE+"/localindex"
 STORAGECLI = APPSTORAGE+"/cli"
 STORAGEBUILD = APPSTORAGE+"/build"
-NEW_BUNDLE_ID = "com.bahus"
+STORAGESETTINGS = APPSTORAGE+"settings.json"
+NEW_BUNDLE_ID = ""
 
 
 class TYPE:
 	IOS = "IOS"
 	MACOSX = "MACOSX"
 
+
 @click.group()
 def apps():
+	global NEW_BUNDLE_ID
 	click.echo("Welcome to AppSource")
+	with open(STORAGESETTINGS, "r+") as settings_file:
+		fcontents = settings_file.read()
+		if fcontents is not "":
+			settings_dict = json.loads(fcontents)
+		else:
+			settings_dict = {}
+		if "group_id" not in settings_dict:
+			click.secho("This software requires a new Group ID that will be used to sign the applications." + ""
+			"This Group ID must match your wildcard App ID and provisioning profile, and it will be used for all of your apps")
+			group_id = click.prompt("Please enter the Group ID in format [TLD].[GROUPNAME] e.g: com.bahus")
+			settings_dict["group_id"] = group_id
+		NEW_BUNDLE_ID = settings_dict["group_id"]
+		#write the settings back
+		settings_file.seek(0)
+		json.dump(settings_dict, settings_file)
 
 
 @click.command()
