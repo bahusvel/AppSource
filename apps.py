@@ -244,6 +244,7 @@ def sync_backend():
 
 @click.command()
 def publish():
+	entitypath = os.getcwd()
 	username = gc.github_login().get_user().login
 	sync_backend()
 	localindex = gc.get_appsource_index()
@@ -259,9 +260,11 @@ def publish():
 	app_id = click.prompt("Please enter the App ID for your application")
 	app_dict["name"] = app_id[app_id.rfind(".")+1:]
 	app_dict["description"] = click.prompt("Please enter a short description for your app")
+	os.chdir(entitypath)
 	app_dict["repo"] = gc.getremote()
 	public_appfile_path = STORAGE_LOCAL_INDEX+"/ios/" + app_id + ".json"
 	write_appfile(app_dict, public_appfile_path)
+	os.chdir(STORAGE_LOCAL_INDEX)
 	gc.gitadd(public_appfile_path)
 	gc.gitcommit("Added " + app_id)
 	gc.gitpush()

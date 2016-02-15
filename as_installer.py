@@ -67,7 +67,7 @@ def replace_bundle_id(appath, old_group_id, new_group_id):
 
 
 def get_identities():
-	output = subprocess.check_output(["security", "find-identity", "-v", "-p", "codesigning"], universal_newlines=True)
+	output = subprocess.check_output(["security", "find-identity", "-p", "codesigning"], universal_newlines=True)
 	identities = set()
 	for line in output.split("\n"):
 		left = line.find("\"")
@@ -139,7 +139,7 @@ def build_prep(app_path, new_group_id):
 	check_install_dependencies(app_path)
 	bundle_id = find_bundle_id(app_path)
 	if bundle_id is None:
-		Exception("Could not find the bundle id")
+		print("Could not find the bundle id")
 		exit(1)
 	print(bundle_id)
 	replace_bundle_id(app_path, bundle_id, new_group_id)
