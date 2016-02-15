@@ -3,7 +3,7 @@ import os
 import shutil
 import json
 import as_gitcontroller as gc
-from as_fscontroller import read_appfile
+from as_fscontroller import read_appfile, write_appfile
 import as_extracting
 import as_installer as installer
 
@@ -206,8 +206,69 @@ def clean():
 
 
 @click.command()
+def sync():
+	sync_backend()
+
+
+def sync_backend():
+	commited = False
+	if not os.path.exists(".git"):
+		if click.confirm("This is not a git repository, would you like to initialize it as git?", default=True):
+			gc.gitinit()
+		else:
+			click.secho("Operation aborted", err=True)
+			exit(1)
+	if gc.getremote() != "":
+		if gc.isdiff():
+			if click.confirm("You have modified the app do you want to commit?"):
+				msg = click.prompt("Please enter a commit message")
+				gc.gitupsync(msg)
+				commited = True
+		gc.gitpull()
+		if commited:
+			gc.gitpush()
+	else:
+		click.secho("You do not have git remote setup", err=True)
+		if click.confirm("Do you want one setup automatically?"):
+			gc.github_login()
+			name = click.prompt("Please enter the name for the repo")
+			remote = gc.github_create_repo(name).clone_url
+		else:
+			click.secho("You will have to create a repository manually and provide the clone url")
+			remote = click.prompt("Please enter the url")
+		gc.addremote(remote)
+		gc.gitadd(".")
+		gc.gitcommit("Initializing repo")
+		gc.gitpush(create_branch=True)
+
+
+@click.command()
 def publish():
-	pass
+	username = gc.github_login().get_user().login
+	sync_backend()
+	localindex = gc.get_appsource_index()
+	if localindex is None:
+		localindex = gc.fork_on_github("bahusvel/AppSource-Index")
+	if not os.path.exists(STORAGE_LOCAL_INDEX):
+		os.chdir(APPSTORAGE)
+		gc.gitclone(localindex.clone_url, aspath="localindex")
+	os.chdir(STORAGE_LOCAL_INDEX)
+	gc.gitpull()
+	# create corfile here
+	app_dict = {}
+	app_id = click.prompt("Please enter the App ID for your application")
+	app_dict["name"] = app_id[app_id.rfind(".")+1:]
+	app_dict["description"] = click.prompt("Please enter a short description for your app")
+	app_dict["repo"] = gc.getremote()
+	public_appfile_path = STORAGE_LOCAL_INDEX+"/ios/" + app_id + ".json"
+	write_appfile(app_dict, public_appfile_path)
+	gc.gitadd(public_appfile_path)
+	gc.gitcommit("Added " + app_id)
+	gc.gitpush()
+	try:
+		gc.github_pull_request(localindex.full_name, username, "AppSource-Index", "Add " + app_id)
+	except Exception:
+		click.secho("Pull request failed, please create one manualy", err=True)
 
 
 # command layout
@@ -216,6 +277,7 @@ apps.add_command(search)
 apps.add_command(update)
 apps.add_command(upgrade)
 apps.add_command(publish)
+apps.add_command(sync)
 apps.add_command(clean)
 
 if __name__ == '__main__':

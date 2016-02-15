@@ -79,12 +79,12 @@ def github_login(username=None, password=None):
 
 
 def github_create_repo(name):
-	github_login().get_user().create_repo(name)
+	return github_login().get_user().create_repo(name)
 
 
-def get_cor_index():
+def get_appsource_index():
 	for repo in github_login().get_user().get_repos():
-		if repo.name == "COR-Index":
+		if repo.name == "AppSource-Index":
 			return repo
 	return None
 
