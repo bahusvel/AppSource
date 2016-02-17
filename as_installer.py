@@ -127,12 +127,14 @@ def get_schemes(app_workspace):
 
 def build_workspace(app_workspace, scheme, signing_identity):
 	if app_workspace is not None:
-		os.system("xcodebuild -workspace {} -scheme {} CODE_SIGN_IDENTITY=\"{}\"".format(app_workspace, scheme, signing_identity))
+		datapath = os.path.dirname(os.path.abspath(app_workspace))
+		os.system("xcodebuild -derivedDataPath \"{}/\" -workspace {} -scheme {} CODE_SIGN_IDENTITY=\"{}\"".format(datapath, app_workspace, scheme, signing_identity))
 
 
 def build_project(app_proj, signing_identity):
 	if app_proj is not None:
-		os.system("xcodebuild -project {} CODE_SIGN_IDENTITY=\"{}\"".format(app_proj, signing_identity))
+		datapath = os.path.dirname(os.path.abspath(app_proj))
+		os.system("xcodebuild -derivedDataPath \"{}/\" -project {} CODE_SIGN_IDENTITY=\"{}\"".format(datapath, app_proj, signing_identity))
 
 
 def build_prep(app_path, new_group_id):

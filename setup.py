@@ -6,7 +6,8 @@ setup(
     py_modules=['apps', 'as_installer', 'as_gitcontroller', 'as_fscontroller', 'as_extracting'],
     install_requires=[
         'Click',
-        'PyGithub'
+        'PyGithub',
+        'flask'
     ],
     entry_points='''
         [console_scripts]

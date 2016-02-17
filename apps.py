@@ -86,7 +86,10 @@ def install(url, name):
 	if url is not None:
 		os.chdir(STORAGEBUILD)
 		github_id = as_extracting.extract_github_id(url)
-		appid = "github.{}.{}".format(github_id[0], github_id[1])
+		if name is not None:
+			appid = name
+		else:
+			appid = "github.{}.{}".format(github_id[0], github_id[1])
 		app_path = STORAGEBUILD+"/"+appid
 		if os.path.exists(app_path):
 			shutil.rmtree(app_path)
