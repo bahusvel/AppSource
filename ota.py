@@ -3,6 +3,7 @@ import apps
 import os
 import threading
 import time
+import socket
 from as_fscontroller import read_appfile
 from flask import make_response
 from functools import wraps, update_wrapper
@@ -72,7 +73,7 @@ def install_ios(app_id):
 	<script>checker('{}')</script>
 	<div id="loader" class="loader">Please wait your app is being built</div>
 	</body>
-	""".format(url_for("static", filename="checkBuild.js"), app_id)
+	""".format("/static/checkBuild.js?"+str(time.time()), app_id)
 
 
 def build_backend(app_id):
@@ -99,47 +100,56 @@ def build_status(app_id):
 		return "Done"
 
 
-@app.route("/ios/<app_id>/plist")
-@nocache
-def app_plist(app_id):
-	return """
-	<a href="itms-services://?action=download-manifest&url={}">Click me!<a>
-	""".format("https://192.168.3.6:8080/static/app.ipa", time.time())
+# @app.route("/ios/<app_id>/plist")
+# @nocache
+# def app_plist(app_id):
+# 	return """
+# 	<a href="itms-services://?action=download-manifest&url={}">Click me!<a>
+# 	""".format("https://192.168.3.6:8080/ios/plist/com.bahus.ForceTorch.plist")
 
 
-@app.route("/ios/<app_id>/real")
+@app.route("/ios/plist/<app_id>")
 @nocache
 def app_real_plist(app_id):
 	with open("static/com.bahus.ForceTorch.plist") as plist_file:
-		return plist_file.read()
+		response = Response(plist_file.read(), mimetype="application/xml")
+		return response
 
 
-@app.route("/ios/<app_id>/ipa/app.ipa")
+@app.route("/ios/ipa/<app_id>")
 @nocache
 def app_ipa(app_id):
-	with open("static/app.ipa", "rb") as ipa_file:
-		return ipa_file
+	with open("static/com.bahus.ForceTorch.ipa", "rb") as ipa_file:
+		response = Response(ipa_file.read(), mimetype="application/octet-stream")
+		return response
 
 
-@app.route("/cert/ssl.p12")
+@app.route("/cert/ca.cer")
 def cert():
-	with open(STORAGECERTS+"/pkcs.p12", 'rb') as cert:
-		response = Response(cert.read(), mimetype="application/x-pkcs12")
+	with open(STORAGECERTS+"/ca.cer", 'rb') as cert:
+		response = Response(cert.read(), mimetype="application/pkix-cert")
 		return response
 
 
 def run_app():
-	if not os.path.exists(STORAGECERTS + "/cert.pem"):
+	if not os.path.exists(STORAGECERTS + "/ca.cer"):
 		cdir = os.getcwd()
 		os.chdir(STORAGECERTS)
-		os.system(
-			"openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes")
-		os.system("openssl pkcs12 -export -nodes -out pkcs.p12 -in cert.pem -inkey key.pem -name AppSource -passout pass:appsource")
+		os.system("openssl genrsa -out ca.key 2048")
+		os.system("openssl req -x509 -sha256 -new -key ca.key -out ca.cer -days 730 -subj /CN=\"AppSource CA\"")
 		os.chdir(cdir)
-	cert = STORAGECERTS + "/cert.pem"
-	key = STORAGECERTS + "/key.pem"
+	if not os.path.exists(STORAGECERTS + "/ssl.cer"):
+		cdir = os.getcwd()
+		os.chdir(STORAGECERTS)
+		os.system("openssl genrsa -out ssl.key 2048")
+		hostname = socket.gethostname()
+		os.system("openssl req -new -out ssl.req -key ssl.key -subj /CN=" + hostname)
+		os.system("openssl x509 -req -sha256 -in ssl.req -out ssl.cer -CAkey ca.key -CA ca.cer -days 365 -CAcreateserial -CAserial serial")
+		os.chdir(cdir)
+	cert = STORAGECERTS + "/ssl.cer"
+	key = STORAGECERTS + "/ssl.key"
 	app.debug = True
-	app.run(host='0.0.0.0', port=8080, ssl_context=(cert, key))
+	app.run(host='0.0.0.0', port=8443, ssl_context=(cert, key))
 
 
 if __name__ == '__main__':
