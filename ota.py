@@ -1,4 +1,4 @@
-from flask import Flask, url_for, Response
+from flask import Flask, url_for, Response, request, redirect
 import apps
 import os
 import threading
@@ -101,7 +101,7 @@ def build_status(app_id):
 def app_plist(app_id):
 	return """
 	<a href="itms-services://?action=download-manifest&url={}">Click me!<a>
-	""".format(url_for("static", filename="com.bahus.ForceTorch.plist"), time.time())
+	""".format("https://192.168.3.6:8080/static/app.ipa", time.time())
 
 
 @app.route("/ios/<app_id>/real")
@@ -123,6 +123,8 @@ def run_app():
 		os.system(
 			"openssl req -x509 -newkey rsa:2048 -keyout \"{}/key.pem\" -out \"{}/cert.pem\" -days 365 -nodes".format(
 				STORAGECERTS, STORAGECERTS))
+		# generate p12
+		# openssl pkcs12 -export -nodes -out pkcs.p12 -in cert.pem -inkey key.pem -name AppSource
 	cert = STORAGECERTS + "/cert.pem"
 	key = STORAGECERTS + "/key.pem"
 	app.debug = True
