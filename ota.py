@@ -30,7 +30,10 @@ def nocache(view):
 
 @app.route("/", methods=['GET'])
 def root():
-	return "<a href=\"{}\">iOS Apps</a>".format(url_for("ios_apps"))
+	return """
+	<a href="{}">iOS Apps</a><br>
+	<a href="{}">Download Certificate</a><br>
+	""".format(url_for("ios_apps"), url_for("cert"))
 
 
 @app.route("/ios")
@@ -118,13 +121,21 @@ def app_ipa(app_id):
 		return ipa_file
 
 
+@app.route("/cert/ssl.p12")
+def cert():
+	with open(STORAGECERTS+"/pkcs.p12", 'rb') as cert:
+		response = Response(cert.read(), mimetype="application/x-pkcs12")
+		return response
+
+
 def run_app():
 	if not os.path.exists(STORAGECERTS + "/cert.pem"):
+		cdir = os.getcwd()
+		os.chdir(STORAGECERTS)
 		os.system(
-			"openssl req -x509 -newkey rsa:2048 -keyout \"{}/key.pem\" -out \"{}/cert.pem\" -days 365 -nodes".format(
-				STORAGECERTS, STORAGECERTS))
-		# generate p12
-		# openssl pkcs12 -export -nodes -out pkcs.p12 -in cert.pem -inkey key.pem -name AppSource
+			"openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes")
+		os.system("openssl pkcs12 -export -nodes -out pkcs.p12 -in cert.pem -inkey key.pem -name AppSource -passout pass:appsource")
+		os.chdir(cdir)
 	cert = STORAGECERTS + "/cert.pem"
 	key = STORAGECERTS + "/key.pem"
 	app.debug = True

@@ -8,7 +8,7 @@ setup(
         'Click',
         'PyGithub',
         'flask',
-        'pyOpenSSL'
+        'Flask-SSLify'
     ],
     entry_points='''
         [console_scripts]
