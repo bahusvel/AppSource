@@ -7,7 +7,8 @@ setup(
     install_requires=[
         'Click',
         'PyGithub',
-        'flask'
+        'flask',
+        'pyOpenSSL'
     ],
     entry_points='''
         [console_scripts]
