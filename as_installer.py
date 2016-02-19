@@ -79,9 +79,20 @@ def get_identities(developer=True, distribution=False):
 	return list(identities)
 
 
-def install_to_device(bundle_path):
+def install_to_device(bundle_path, remove=True):
 	# requires https://github.com/phonegap/ios-deploy
-	os.system("ios-deploy --justlaunch --bundle \"{}\"".format(bundle_path))
+	os.system("ios-deploy -r --bundle \"{}\"".format(bundle_path))
+
+
+def list_installed():
+	out = subprocess.check_output(["ios-deploy", "-B"], universal_newlines=True).split("\n")
+	out = list(filter(lambda x: not x.startswith("[....]"), out))
+	out = list(filter(lambda x: not x == "", out))
+	return out
+
+def connected_devices():
+	#ios-deploy -c -t 2
+	pass
 
 
 def check_install_dependencies(app_path):
@@ -134,7 +145,7 @@ def build_workspace(app_workspace, scheme, signing_identity):
 def build_project(app_proj, signing_identity):
 	if app_proj is not None:
 		datapath = os.path.dirname(os.path.abspath(app_proj))
-		os.system("xcodebuild -derivedDataPath \"{}/\" -project {} CODE_SIGN_IDENTITY=\"{}\"".format(datapath, app_proj, signing_identity))
+		os.system("xcodebuild -project {} CODE_SIGN_IDENTITY=\"{}\"".format(app_proj, signing_identity))
 
 
 def build_prep(app_path, new_group_id):
@@ -145,8 +156,3 @@ def build_prep(app_path, new_group_id):
 		exit(1)
 	print(bundle_id)
 	replace_bundle_id(app_path, bundle_id, new_group_id)
-
-#build("github.fullstackio.FlappySwift", "/Users/denislavrov/Library/Application Support/AppSource/build", "com.bahus")
-#print(get_identities())
-
-#print(get_schemes("/Users/denislavrov/Library/Application Support/AppSource/build/github.AaronRandall.Megabite/Megabite.xcworkspace"))
