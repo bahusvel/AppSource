@@ -100,25 +100,20 @@ def build_status(app_id):
 		return "Done"
 
 
-# @app.route("/ios/<app_id>/plist")
-# @nocache
-# def app_plist(app_id):
-# 	return """
-# 	<a href="itms-services://?action=download-manifest&url={}">Click me!<a>
-# 	""".format("https://192.168.3.6:8080/ios/plist/com.bahus.ForceTorch.plist")
-
-
-@app.route("/ios/plist/<app_id>")
+@app.route("/ios/plist/<app_plist>")
 @nocache
-def app_real_plist(app_id):
-	with open("static/com.bahus.ForceTorch.plist") as plist_file:
+def app_real_plist(app_plist):
+	plist_path = STORAGEOTA+"/"+app_plist
+	assert os.path.exists(plist_path)
+	with open(plist_path) as plist_file:
 		response = Response(plist_file.read(), mimetype="application/xml")
 		return response
 
 
-@app.route("/ios/ipa/<app_id>")
+@app.route("/ios/ipa/<app_ipa>")
 @nocache
-def app_ipa(app_id):
+def app_ipa(app_ipa):
+	ipa_path = STORAGEOTA+"/"+app_ipa
 	with open("static/com.bahus.ForceTorch.ipa", "rb") as ipa_file:
 		response = Response(ipa_file.read(), mimetype="application/octet-stream")
 		return response
