@@ -66,7 +66,7 @@ def replace_bundle_id(appath, old_group_id, new_group_id):
 	return True
 
 
-def get_identities():
+def get_identities(developer=True, distribution=False):
 	output = subprocess.check_output(["security", "find-identity", "-p", "codesigning"], universal_newlines=True)
 	identities = set()
 	for line in output.split("\n"):

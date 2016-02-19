@@ -8,6 +8,9 @@ from as_fscontroller import read_appfile
 from flask import make_response
 from functools import wraps, update_wrapper
 from datetime import datetime
+import shutil
+import as_gitcontroller as gc
+import as_installer as installer
 
 app = Flask("AppSource")
 STORAGEOTA = apps.APPSTORAGE + "/ota"
@@ -85,7 +88,22 @@ def build_backend(app_id):
 		open(build_lock, 'w').close()
 	else:
 		print("App is already building!!!")
-	time.sleep(1)
+
+	# TODO check if IPA already exists
+	# build procedure here
+	file = "{}/{}.json".format(apps.STORAGEIOS, app_id)
+	assert os.path.exists(file)
+	appdict = read_appfile(file)
+	url = appdict["repo"]
+	assert url is not None
+	app_path = apps.STORAGEBUILD+"/"+app_id
+	if os.path.exists(app_path):
+		shutil.rmtree(app_path)
+	gc.gitclone(url, aspath=app_path)
+	identities = installer.get_identities()
+	assert len(identities) == 1
+
+	#finished
 	os.remove(build_lock)
 	print("Finished building the app")
 
