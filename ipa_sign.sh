@@ -25,8 +25,8 @@ if [[ ! ( # any of the following are not true
         ) ]];
     then
         cat << EOF >&2
-    Usage: $(basename "$0") Application.ipa foo/bar.mobileprovision "iPhone Distribution: I can haz code signed"
-    Usage: $(basename "$0") -i Application.ipa
+    Usage: $(basename -- "$0") Application.ipa foo/bar.mobileprovision "iPhone Distribution: I can haz code signed"
+    Usage: $(basename -- "$0") -i Application.ipa
 
     Options:
       -i    Only inspect the package. Do not resign it.
@@ -43,13 +43,13 @@ set -o errexit
 #set -o xtrace
 
 realpath(){
-    echo "$(cd "$(dirname "$1")"; echo -n "$(pwd)/$(basename "$1")")";
+    echo "$(cd "$(dirname "$1")"; echo -n "$(pwd)/$(basename -- "$1")")";
 }
 
 IPA="$(realpath $1)"
 PROVISION="$(realpath "$2")"
-TMP="$(mktemp -d /tmp/resign.$(basename "$IPA" .ipa).XXXXX)"
-IPA_NEW="$(pwd)/$(basename "$IPA" .ipa).resigned.ipa"
+TMP="$(mktemp -d /tmp/resign.$(basename -- "$IPA" .ipa).XXXXX)"
+IPA_NEW="$(pwd)/$(basename -- "$IPA" .ipa).resigned.ipa"
 CLEANUP_TEMP=0 # Do not remove this line or "set -o nounset" will error on checks below
 #CLEANUP_TEMP=1 # Uncomment this line if you want this script to clean up after itself
 cd "$TMP"
