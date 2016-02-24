@@ -100,24 +100,28 @@ def get_backend(url, name, path):
 	return appdict, app_path
 
 
+def get_identity():
+	identities = installer.get_identities()
+	click.secho(
+	"""The app you have chosen will need to be signed,
+	in order to sign the app you need to have an active Apple Developer account,
+	you are also requried to generate wildcard AppID and Mobile Provisioning Profile for that AppID"""
+	)
+	if len(identities) > 1:
+		s_identity = click.prompt("Please choose the signing identity", type=click.Choice(identities))
+	elif len(identities) == 1:
+		s_identity = identities[0]
+	else:
+		click.secho("No developer identities were found on your machine!", err=True)
+		exit(1)
+	return s_identity
+
 @click.command()
 @click.option("--url")
 @click.argument("name")
 def install(url, name):
 		appdict, app_path = get_backend(url, name, STORAGEBUILD)
-		identities = installer.get_identities()
-		click.secho(
-		"""The app you have chosen will need to be signed,
-		in order to sign the app you need to have an active Apple Developer account,
-		you are also requried to generate wildcard AppID and Mobile Provisioning Profile for that AppID"""
-		)
-		if len(identities) > 1:
-			s_identity = click.prompt("Please choose the signing identity", type=click.Choice(identities))
-		elif len(identities) == 1:
-			s_identity = identities[0]
-		else:
-			click.secho("No developer identities were found on your machine!", err=True)
-			exit(1)
+		s_identity = get_identity()
 		installer.build_prep(app_path, settings_dict["group_id"])
 
 		#compiling
@@ -166,6 +170,17 @@ def search(search_term, searchmethod):
 	if len(apps) == 0:
 		click.secho("Nothing found for \"{}\"".format(search_term))
 		click.secho("Make sure to update your index using: \"apps update\"")
+
+
+@click.command()
+@click.argument("ipa_path")
+@click.option("profile_path", prompt=True)
+def resign(ipa_path, profile_path):
+	if not (ipa_path.endswith(".ipa") or ipa_path.endswith(".IPA")):
+		click.secho("Non IPA File was supplied")
+	ipa_resign_tool = STORAGECLI+"/ipa_sign.sh"
+	s_identity = get_identity()
+	os.system("{} {} {} \"{}\"".format(ipa_resign_tool, ipa_path, profile_path, s_identity))
 
 
 def search_backend(term, searchtype="QUICK", entity_type=TYPE.IOS):
