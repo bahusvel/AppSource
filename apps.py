@@ -72,7 +72,11 @@ def apps():
 @click.command()
 @click.option("--url")
 @click.argument("name")
-def install(url, name):
+def get(url, name):
+	get_backend(url, name, os.getcwd())
+
+
+def get_backend(url, name, path):
 	if name is None and url is None:
 		name = click.prompt("Enter the module name")
 	if name is not None and url is None:
@@ -84,16 +88,23 @@ def install(url, name):
 			click.secho("The module you requested is not in the index", err=True)
 			url = click.prompt("Please enter the url for the module")
 	if url is not None:
-		os.chdir(STORAGEBUILD)
 		github_id = as_extracting.extract_github_id(url)
 		if name is not None:
 			appid = name
 		else:
 			appid = "github.{}.{}".format(github_id[0], github_id[1])
-		app_path = STORAGEBUILD+"/"+appid
+		app_path = path+"/"+appid
 		if os.path.exists(app_path):
 			shutil.rmtree(app_path)
-		gc.gitclone(url, aspath=appid)
+		gc.gitclone(url, aspath=app_path)
+	return appdict, app_path
+
+
+@click.command()
+@click.option("--url")
+@click.argument("name")
+def install(url, name):
+		appdict, app_path = get_backend(url, name, STORAGEBUILD)
 		identities = installer.get_identities()
 		click.secho(
 		"""The app you have chosen will need to be signed,
@@ -152,6 +163,9 @@ def search(search_term, searchmethod):
 	for app in apps:
 		appdict = read_appfile(STORAGEIOS + "/" + app)
 		click.secho("{} ({}) @ {}".format(appdict["name"], app[:-5], appdict["repo"]))
+	if len(apps) == 0:
+		click.secho("Nothing found for \"{}\"".format(search_term))
+		click.secho("Make sure to update your index using: \"apps update\"")
 
 
 def search_backend(term, searchtype="QUICK", entity_type=TYPE.IOS):
@@ -285,6 +299,7 @@ apps.add_command(upgrade)
 apps.add_command(publish)
 apps.add_command(sync)
 apps.add_command(clean)
+apps.add_command(get)
 
 if __name__ == '__main__':
 	apps()
