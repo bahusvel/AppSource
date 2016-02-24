@@ -2,6 +2,7 @@ import os
 import mmap
 import subprocess
 import apps
+import plistlib
 
 
 def findFileByType(appcontent, extension):
@@ -125,6 +126,47 @@ def get_schemes(app_workspace):
 	return schemes
 
 
+def local_profiles():
+	user_dir = os.path.expanduser("~")
+	profiles_dir = user_dir+"/Library/MobileDevice/Provisioning Profiles/"
+	profiles_files = os.listdir(profiles_dir)
+	profiles = []
+	for profile_file in profiles_files:
+		profiles.append(profiles_dir+"/"+profile_file)
+	return profiles
+
+
+def filtered_profiles(team=None, app_id=None, type=None):
+	profile_dicts = {}
+	profiles = list(profile_dicts.keys())
+	filtered = []
+	for profile_path in local_profiles():
+		plist_string = plist_from_profile(profile_path)
+		plist_dict = plistlib.loads(plist_string)
+		profile_dicts[profile_path] = plist_dict
+	if team is None:
+		filtered = profiles
+	else:
+		for profile in profiles:
+			profile_dict = profile_dicts[profile]
+			if profile_dict["ApplicationIdentifierPrefix"] == team:
+				filtered.append(profile)
+	if app_id is not None:
+		profiles = filtered
+		filtered = []
+		for profile in profiles:
+			profile_dict = profile_dicts[profile]
+			prof_app_id = profile_dict["Entitlements"]["application-identifier"]
+			prof_app_id = app_id.replace(profile_dict["ApplicationIdentifierPrefix"]+".", "")
+			if prof_app_id == app_id:
+				filtered.append(profile)
+	return filtered
+
+def plist_from_profile(profile_path):
+	out = subprocess.check_output(["security", 'cms', "-D", "-i", profile_path])
+	return out
+
+
 def build_workspace(app_workspace, scheme, signing_identity):
 	if app_workspace is not None:
 		datapath = os.path.dirname(os.path.abspath(app_workspace))
@@ -150,3 +192,4 @@ def build_prep(app_path, new_group_id):
 #print(get_identities())
 
 #print(get_schemes("/Users/denislavrov/Library/Application Support/AppSource/build/github.AaronRandall.Megabite/Megabite.xcworkspace"))
+print(local_profiles())

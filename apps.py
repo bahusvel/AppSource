@@ -174,7 +174,7 @@ def search(search_term, searchmethod):
 
 @click.command()
 @click.argument("ipa_path")
-@click.option("profile_path", prompt=True)
+@click.option("--profile_path", prompt=True)
 def resign(ipa_path, profile_path):
 	if not (ipa_path.endswith(".ipa") or ipa_path.endswith(".IPA")):
 		click.secho("Non IPA File was supplied")
