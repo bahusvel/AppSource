@@ -174,13 +174,17 @@ def search(search_term, searchmethod):
 
 @click.command()
 @click.argument("ipa_path")
-@click.option("--profile_path", prompt=True)
+@click.option("--profile_path")
 def resign(ipa_path, profile_path):
 	if not (ipa_path.endswith(".ipa") or ipa_path.endswith(".IPA")):
 		click.secho("Non IPA File was supplied")
 	ipa_resign_tool = STORAGECLI+"/ipa_sign.sh"
 	s_identity = get_identity()
-	os.system("{} {} {} \"{}\"".format(ipa_resign_tool, ipa_path, profile_path, s_identity))
+	if profile_path is None:
+		profiles = installer.filtered_profiles(team=installer.team_id_from_identity(s_identity), app_id="*")
+		profile = click.prompt("Please choose a profile to embed into IPA", type=click.Choice(list(profiles.keys())))
+		profile_path = profiles[profile]
+	os.system("sh \"{}\" {} {} \"{}\"".format(ipa_resign_tool, ipa_path, profile_path, s_identity))
 
 
 def search_backend(term, searchtype="QUICK", entity_type=TYPE.IOS):
@@ -315,6 +319,7 @@ apps.add_command(publish)
 apps.add_command(sync)
 apps.add_command(clean)
 apps.add_command(get)
+apps.add_command(resign)
 
 if __name__ == '__main__':
 	apps()

@@ -132,24 +132,24 @@ def local_profiles():
 	profiles_files = os.listdir(profiles_dir)
 	profiles = []
 	for profile_file in profiles_files:
-		profiles.append(profiles_dir+"/"+profile_file)
+		profiles.append(profiles_dir+profile_file)
 	return profiles
 
 
 def filtered_profiles(team=None, app_id=None, type=None):
 	profile_dicts = {}
-	profiles = list(profile_dicts.keys())
 	filtered = []
 	for profile_path in local_profiles():
 		plist_string = plist_from_profile(profile_path)
 		plist_dict = plistlib.loads(plist_string)
 		profile_dicts[profile_path] = plist_dict
+	profiles = list(profile_dicts.keys())
 	if team is None:
 		filtered = profiles
 	else:
 		for profile in profiles:
 			profile_dict = profile_dicts[profile]
-			if profile_dict["ApplicationIdentifierPrefix"] == team:
+			if profile_dict["ApplicationIdentifierPrefix"][0] == team:
 				filtered.append(profile)
 	if app_id is not None:
 		profiles = filtered
@@ -157,14 +157,26 @@ def filtered_profiles(team=None, app_id=None, type=None):
 		for profile in profiles:
 			profile_dict = profile_dicts[profile]
 			prof_app_id = profile_dict["Entitlements"]["application-identifier"]
-			prof_app_id = app_id.replace(profile_dict["ApplicationIdentifierPrefix"]+".", "")
+			prof_app_id = prof_app_id.replace(profile_dict["ApplicationIdentifierPrefix"][0]+".", "")
 			if prof_app_id == app_id:
 				filtered.append(profile)
-	return filtered
+	# return dict[name]->file
+	prof_name_dict = {}
+	for profile in filtered:
+		prof_dict = profile_dicts[profile]
+		prof_name_dict[prof_dict["Name"]] = profile
+	return prof_name_dict
+
 
 def plist_from_profile(profile_path):
 	out = subprocess.check_output(["security", 'cms', "-D", "-i", profile_path])
 	return out
+
+
+def team_id_from_identity(identity):
+	start = identity.find("(")
+	end = identity.rfind(")")
+	return identity[start+1:end]
 
 
 def build_workspace(app_workspace, scheme, signing_identity):
@@ -192,4 +204,4 @@ def build_prep(app_path, new_group_id):
 #print(get_identities())
 
 #print(get_schemes("/Users/denislavrov/Library/Application Support/AppSource/build/github.AaronRandall.Megabite/Megabite.xcworkspace"))
-print(local_profiles())
+#print(team_id_from_identity("iPhone Distribution: Denis Lavrov (THZ88VX669)"))
