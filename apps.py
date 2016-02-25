@@ -184,7 +184,8 @@ def resign(ipa_path, profile_path):
 		profiles = installer.filtered_profiles(team=installer.team_id_from_identity(s_identity), app_id="*")
 		profile = click.prompt("Please choose a profile to embed into IPA", type=click.Choice(list(profiles.keys())))
 		profile_path = profiles[profile]
-	os.system("sh \"{}\" {} {} \"{}\"".format(ipa_resign_tool, ipa_path, profile_path, s_identity))
+	os.chdir(os.path.dirname(ipa_path))
+	os.system("bash \"{}\" {} {} \"{}\"".format(ipa_resign_tool, ipa_path, profile_path, s_identity))
 
 
 def search_backend(term, searchtype="QUICK", entity_type=TYPE.IOS):

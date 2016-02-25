@@ -58,15 +58,18 @@ unzip -q "$IPA"
 plutil -convert xml1 Payload/*.app/Info.plist -o Info.plist
 echo "App has BundleDisplayName '$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' Info.plist)' and BundleShortVersionString '$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist)'"
 echo "App has BundleIdentifier  '$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' Info.plist)' and BundleVersion $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' Info.plist)"
-security cms -D -i Payload/*.app/embedded.mobileprovision > mobileprovision.plist
-echo "App has provision         '$(/usr/libexec/PlistBuddy -c "Print :Name" mobileprovision.plist)', which supports '$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" mobileprovision.plist)'"
+#security cms -D -i Payload/*.app/embedded.mobileprovision > mobileprovision.plist
+#echo "App has provision         '$(/usr/libexec/PlistBuddy -c "Print :Name" mobileprovision.plist)', which supports '$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" mobileprovision.plist)'"
 if [[ ! ($INSPECT_ONLY == 1) ]]; then
     CERTIFICATE="$3"
     security cms -D -i "$PROVISION" > provision.plist
     echo "Embedding provision       '$(/usr/libexec/PlistBuddy -c "Print :Name" provision.plist)', which supports '$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" provision.plist)'"
     rm -rf Payload/*.app/_CodeSignature Payload/*.app/CodeResources
-    cp "$PROVISION" Payload/*.app/embedded.mobileprovision
-    /usr/bin/codesign -f -s "$CERTIFICATE" --resource-rules Payload/*.app/ResourceRules.plist Payload/*.app
+    CURRENTDIR=$(pwd)
+    cd Payload/*.app/
+    cp "$PROVISION" embedded.mobileprovision
+    cd $CURRENTDIR
+    /usr/bin/codesign -f -s "$CERTIFICATE" Payload/*.app
     zip -qr "$IPA_NEW" Payload
 fi
 [[ $CLEANUP_TEMP -eq 1 ]] && rm -rf "$TMP"
