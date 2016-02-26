@@ -1,0 +1,16 @@
+ unzip
+ doCodesigning or  doProvisioning
+ if provisioning:
+   I delete the embedded.mobileprovision, and replace it with the new one...
+   then check the identifier in provisioning and make sure it is either wild card or matches the bundle id
+   I have to then fix the entitlements...
+
+
+fixEntitlements():
+    extract entitlements from provisioning profile using:
+    [generateEntitlementsTask setLaunchPath:@"/usr/bin/security"];
+    [generateEntitlementsTask setArguments:@[@"cms", @"-D", @"-i", provisioningPathField.stringValue]];
+    write entitlements.plist into the working directory
+    doCodesigning()
+
+doCodesigning():

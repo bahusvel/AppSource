@@ -2,6 +2,7 @@ import os
 import mmap
 import subprocess
 import apps
+import plistlib
 
 
 def findFileByType(appcontent, extension):
@@ -79,20 +80,9 @@ def get_identities(developer=True, distribution=False):
 	return list(identities)
 
 
-def install_to_device(bundle_path, remove=True):
+def install_to_device(bundle_path):
 	# requires https://github.com/phonegap/ios-deploy
-	os.system("ios-deploy -r --bundle \"{}\"".format(bundle_path))
-
-
-def list_installed():
-	out = subprocess.check_output(["ios-deploy", "-B"], universal_newlines=True).split("\n")
-	out = list(filter(lambda x: not x.startswith("[....]"), out))
-	out = list(filter(lambda x: not x == "", out))
-	return out
-
-def connected_devices():
-	#ios-deploy -c -t 2
-	pass
+	os.system("ios-deploy --justlaunch --bundle \"{}\"".format(bundle_path))
 
 
 def check_install_dependencies(app_path):
@@ -136,6 +126,59 @@ def get_schemes(app_workspace):
 	return schemes
 
 
+def local_profiles():
+	user_dir = os.path.expanduser("~")
+	profiles_dir = user_dir+"/Library/MobileDevice/Provisioning Profiles/"
+	profiles_files = os.listdir(profiles_dir)
+	profiles = []
+	for profile_file in profiles_files:
+		profiles.append(profiles_dir+profile_file)
+	return profiles
+
+
+def filtered_profiles(team=None, app_id=None, type=None):
+	profile_dicts = {}
+	filtered = []
+	for profile_path in local_profiles():
+		plist_string = plist_from_profile(profile_path)
+		plist_dict = plistlib.loads(plist_string)
+		profile_dicts[profile_path] = plist_dict
+	profiles = list(profile_dicts.keys())
+	if team is None:
+		filtered = profiles
+	else:
+		for profile in profiles:
+			profile_dict = profile_dicts[profile]
+			if profile_dict["ApplicationIdentifierPrefix"][0] == team:
+				filtered.append(profile)
+	if app_id is not None:
+		profiles = filtered
+		filtered = []
+		for profile in profiles:
+			profile_dict = profile_dicts[profile]
+			prof_app_id = profile_dict["Entitlements"]["application-identifier"]
+			prof_app_id = prof_app_id.replace(profile_dict["ApplicationIdentifierPrefix"][0]+".", "")
+			if prof_app_id == app_id:
+				filtered.append(profile)
+	# return dict[name]->file
+	prof_name_dict = {}
+	for profile in filtered:
+		prof_dict = profile_dicts[profile]
+		prof_name_dict[prof_dict["Name"]] = profile
+	return prof_name_dict
+
+
+def plist_from_profile(profile_path):
+	out = subprocess.check_output(["security", 'cms', "-D", "-i", profile_path])
+	return out
+
+
+def team_id_from_identity(identity):
+	start = identity.find("(")
+	end = identity.rfind(")")
+	return identity[start+1:end]
+
+
 def build_workspace(app_workspace, scheme, signing_identity):
 	if app_workspace is not None:
 		datapath = os.path.dirname(os.path.abspath(app_workspace))
@@ -145,7 +188,7 @@ def build_workspace(app_workspace, scheme, signing_identity):
 def build_project(app_proj, signing_identity):
 	if app_proj is not None:
 		datapath = os.path.dirname(os.path.abspath(app_proj))
-		os.system("xcodebuild -project {} CODE_SIGN_IDENTITY=\"{}\"".format(app_proj, signing_identity))
+		os.system("xcodebuild -derivedDataPath \"{}/\" -project {} CODE_SIGN_IDENTITY=\"{}\"".format(datapath, app_proj, signing_identity))
 
 
 def build_prep(app_path, new_group_id):
@@ -156,3 +199,9 @@ def build_prep(app_path, new_group_id):
 		exit(1)
 	print(bundle_id)
 	replace_bundle_id(app_path, bundle_id, new_group_id)
+
+#build("github.fullstackio.FlappySwift", "/Users/denislavrov/Library/Application Support/AppSource/build", "com.bahus")
+#print(get_identities())
+
+#print(get_schemes("/Users/denislavrov/Library/Application Support/AppSource/build/github.AaronRandall.Megabite/Megabite.xcworkspace"))
+#print(team_id_from_identity("iPhone Distribution: Denis Lavrov (THZ88VX669)"))

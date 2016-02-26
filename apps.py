@@ -72,7 +72,11 @@ def apps():
 @click.command()
 @click.option("--url")
 @click.argument("name")
-def install(url, name):
+def get(url, name):
+	get_backend(url, name, os.getcwd())
+
+
+def get_backend(url, name, path):
 	if name is None and url is None:
 		name = click.prompt("Enter the module name")
 	if name is not None and url is None:
@@ -84,29 +88,40 @@ def install(url, name):
 			click.secho("The module you requested is not in the index", err=True)
 			url = click.prompt("Please enter the url for the module")
 	if url is not None:
-		os.chdir(STORAGEBUILD)
 		github_id = as_extracting.extract_github_id(url)
 		if name is not None:
 			appid = name
 		else:
 			appid = "github.{}.{}".format(github_id[0], github_id[1])
-		app_path = STORAGEBUILD+"/"+appid
+		app_path = path+"/"+appid
 		if os.path.exists(app_path):
 			shutil.rmtree(app_path)
-		gc.gitclone(url, aspath=appid)
-		identities = installer.get_identities()
-		click.secho(
-		"""The app you have chosen will need to be signed,
-		in order to sign the app you need to have an active Apple Developer account,
-		you are also requried to generate wildcard AppID and Mobile Provisioning Profile for that AppID"""
-		)
-		if len(identities) > 1:
-			s_identity = click.prompt("Please choose the signing identity", type=click.Choice(identities))
-		elif len(identities) == 1:
-			s_identity = identities[0]
-		else:
-			click.secho("No developer identities were found on your machine!", err=True)
-			exit(1)
+		gc.gitclone(url, aspath=app_path)
+	return appdict, app_path
+
+
+def get_identity():
+	identities = installer.get_identities()
+	click.secho(
+	"""The app you have chosen will need to be signed,
+	in order to sign the app you need to have an active Apple Developer account,
+	you are also requried to generate wildcard AppID and Mobile Provisioning Profile for that AppID"""
+	)
+	if len(identities) > 1:
+		s_identity = click.prompt("Please choose the signing identity", type=click.Choice(identities))
+	elif len(identities) == 1:
+		s_identity = identities[0]
+	else:
+		click.secho("No developer identities were found on your machine!", err=True)
+		exit(1)
+	return s_identity
+
+@click.command()
+@click.option("--url")
+@click.argument("name")
+def install(url, name):
+		appdict, app_path = get_backend(url, name, STORAGEBUILD)
+		s_identity = get_identity()
 		installer.build_prep(app_path, settings_dict["group_id"])
 
 		#compiling
@@ -152,6 +167,25 @@ def search(search_term, searchmethod):
 	for app in apps:
 		appdict = read_appfile(STORAGEIOS + "/" + app)
 		click.secho("{} ({}) @ {}".format(appdict["name"], app[:-5], appdict["repo"]))
+	if len(apps) == 0:
+		click.secho("Nothing found for \"{}\"".format(search_term))
+		click.secho("Make sure to update your index using: \"apps update\"")
+
+
+@click.command()
+@click.argument("ipa_path")
+@click.option("--profile_path")
+def resign(ipa_path, profile_path):
+	if not (ipa_path.endswith(".ipa") or ipa_path.endswith(".IPA")):
+		click.secho("Non IPA File was supplied")
+	ipa_resign_tool = STORAGECLI+"/ipa_sign.sh"
+	s_identity = get_identity()
+	if profile_path is None:
+		profiles = installer.filtered_profiles(team=installer.team_id_from_identity(s_identity), app_id="*")
+		profile = click.prompt("Please choose a profile to embed into IPA", type=click.Choice(list(profiles.keys())))
+		profile_path = profiles[profile]
+	os.chdir(os.path.dirname(ipa_path))
+	os.system("bash \"{}\" {} {} \"{}\"".format(ipa_resign_tool, ipa_path, profile_path, s_identity))
 
 
 def search_backend(term, searchtype="QUICK", entity_type=TYPE.IOS):
@@ -285,6 +319,8 @@ apps.add_command(upgrade)
 apps.add_command(publish)
 apps.add_command(sync)
 apps.add_command(clean)
+apps.add_command(get)
+apps.add_command(resign)
 
 if __name__ == '__main__':
 	apps()
