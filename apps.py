@@ -2,6 +2,7 @@ import click
 import os
 import shutil
 import json
+import socket
 import as_gitcontroller as gc
 from as_fscontroller import read_appfile, write_appfile
 import as_extracting
@@ -26,6 +27,8 @@ STORAGECLI = APPSTORAGE+"/cli"
 STORAGEBUILD = APPSTORAGE+"/build"
 check_create(STORAGEBUILD)
 STORAGESETTINGS = APPSTORAGE+"/settings.json"
+STORAGECERTS = APPSTORAGE + "/certs"
+check_create(STORAGECERTS)
 settings_dict = {}
 
 
@@ -67,6 +70,48 @@ def apps():
 		#write the settings back
 		settings_file.seek(0)
 		json.dump(settings_dict, settings_file)
+
+
+@click.group()
+def certs():
+	pass
+
+
+@click.command()
+@click.option("--cert", prompt=True)
+@click.option("--key", prompt=True)
+def import_ca(cert, key):
+	shutil.copyfile(cert, STORAGECERTS+"/ca.cer")
+	shutil.copyfile(key, STORAGECERTS+"/ca.key")
+
+
+@click.command()
+def generate_ca():
+	os.system("openssl genrsa -out \"{}/ca.key\" 2048".format(STORAGECERTS))
+	os.system("openssl req -x509 -sha256 -new -key \"{}/ca.key\" -out \"{}/ca.cer\" -days 730 -subj /CN=\"AppSource CA\"".format(STORAGECERTS, STORAGECERTS))
+
+
+@click.command()
+@click.option("--destination", prompt=True)
+def export_ca(destination):
+	shutil.copy(STORAGECERTS+"/ca.cer", destination)
+	shutil.copy(STORAGECERTS+"/ca.key", destination)
+
+
+@click.command()
+@click.option("--hostname")
+@click.option("--destination")
+def generate_ssl(hostname, destination):
+	if not os.path.exists(STORAGECERTS + "/ca.cer"):
+		click.secho("CA is not present, cannot make ssl certificate withou CA")
+		exit(-1)
+	if destination is None:
+		destination = STORAGECERTS
+	os.system("openssl genrsa -out \"{}/ssl.key\" 2048".format(destination))
+	if hostname is None:
+		hostname = socket.gethostname()
+	os.system("openssl req -new -out \"{}/ssl.req\" -key \"{}/ssl.key\" -subj /CN={}".format(destination, destination, hostname))
+	os.system("openssl x509 -req -sha256 -in \"{}/ssl.req\" -out \"{}/ssl.cer\" -CAkey \"{}/ca.key\" -CA \"{}/ca.cer\" -days 365 -CAcreateserial -CAserial serial".format(destination, destination, STORAGECERTS, STORAGECERTS))
 
 
 @click.command()
@@ -311,6 +356,11 @@ def publish():
 		click.secho("Pull request failed, please create one manualy", err=True)
 
 
+# certs layout
+certs.add_command(import_ca)
+certs.add_command(generate_ca)
+certs.add_command(export_ca)
+certs.add_command(generate_ssl)
 # command layout
 apps.add_command(install)
 apps.add_command(search)
@@ -321,6 +371,7 @@ apps.add_command(sync)
 apps.add_command(clean)
 apps.add_command(get)
 apps.add_command(resign)
+apps.add_command(certs)
 
 if __name__ == '__main__':
 	apps()
