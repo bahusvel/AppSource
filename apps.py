@@ -101,7 +101,8 @@ def export_ca(destination):
 @click.command()
 @click.option("--hostname")
 @click.option("--destination")
-def generate_ssl(hostname, destination):
+@click.option("--p12/--no-p12", default=False)
+def generate_ssl(hostname, destination, p12):
 	if not os.path.exists(STORAGECERTS + "/ca.cer"):
 		click.secho("CA is not present, cannot make ssl certificate withou CA")
 		exit(-1)
@@ -112,6 +113,8 @@ def generate_ssl(hostname, destination):
 		hostname = socket.gethostname()
 	os.system("openssl req -new -out \"{}/ssl.req\" -key \"{}/ssl.key\" -subj /CN={}".format(destination, destination, hostname))
 	os.system("openssl x509 -req -sha256 -in \"{}/ssl.req\" -out \"{}/ssl.cer\" -CAkey \"{}/ca.key\" -CA \"{}/ca.cer\" -days 365 -CAcreateserial -CAserial serial".format(destination, destination, STORAGECERTS, STORAGECERTS))
+	if destination is not None and p12 is True:
+		os.system("openssl pkcs12 -export -out \"{}/pkcs.p12\" -in \"{}/ssl.cer\" -inkey \"{}/ssl.key\" -name AppSource -passout pass:appsource".format(destination, destination, destination))
 
 
 @click.command()
